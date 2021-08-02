@@ -170,14 +170,49 @@ Strategies to allocate spot instances:
 
 Spot fleets allow us to automatically request Spot instances with the lowest price
 
+Instance types:
+R: applications that needs a lot of RAM - inmemory caches
+C: applications that needs good CPU - compute/databse
+M: applications that are balanced (think medium)- general - web/app
+I: applications that need good local i/o (instance storae) databases
+G: applications that need a GPU - video rendering/machine learning
+T2/T3: burstable instances (up to a capacity)
+T2/T3 - unlimited: unlimited burst
 
+burstable instances:
+- AWS has a concept of burstable instances (t2/t3)
+- Burst overall, the instance has ok cpu performance
+- hen the machine needs to process something unexpected (a spike in load for example), it can burst, and CPU can be very goo
+- If the machine bursts, it utilizes "burst credits"
+- If all the credits are gone, the CPU becomes BAD
+- If the machine stops bursting, credits accumulate over time
+- Burstable instances can be amazing to handle unexpected traffic and getting the insurance that it will be handled correctly
+- If your instance consistently runs low on credit, you need to move to a different kind of non-burstable instance
+- Credit usage can be seen in cloudwatch
+- bigger the instance the faster you earn credits
+T unlimited:
+- unlimited burst credit balance
+- you pay extra money if you go over your credit balance, but you don't lose performance
+- overall, it is a new offering, so be careful, costs could go high if you're not monitoring the health of your instances
+- if average CPU usage over aa 24-hour period exceeds the baseline, the instance is billed for additional usage per vcpu/hour
+- Be careful, costs could go high if you're not monitoring the cpu health of your instances
+what happens when credit are exhausted:
+after the credits are exhausted, the measured cpu utilization drops
 
-
-
-
-
-
-
+Elastic IPS
+-when you stop and start an EC2 instance, it changes its public ip
+If you need to have a fixed IP, you need an Elastic IP
+An Elastic IP is a public IPv4 you own as long as you don't delete it
+You can attach it to one instance at a time
+You can remap it across instances
+You don't pay for the Elastic IP if it's attached to a server
+you pay for the elastic ip if it's not attached to the server
+- With an elastic ip address, you can mask the filure of an insatance or software by rapidly remapping the address to another instance in your account
+- You can only have 5 Elastic IP in your account (you can ask AWS to increase that)
+How you can avoid using Elasitc IP:
+- Always think if other alternatives are available to you
+- You could use a random public IP and register a DNS name to it
+- Or use a Load Balancer with a static hostname
 
 
 
