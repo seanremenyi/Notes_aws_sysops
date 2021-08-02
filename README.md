@@ -80,6 +80,98 @@ Instance Terminated Immediately (goes from pending to terminated)
 - The instance store-backed AMI that you used to launch the instance is missing the required part (an image.part.xx file)
 - To find the exact reason, check out the EC2 console of AWS - instances - Description tab, note the reason next to the state transition reason label
 
+SSH Troubleshooting
+-Make sre the private key(pem file) on your linux machine has 400 permissions, else you will get "unprotected prifate key file" error
+- Make sure the username for the OS is given correctly when logging via SSH, else you will get "Host key not found", "permission denied", or "Connection closed by [instance] port22" error
+Possible resons for "Connection timed out" to EC2 instance vis ssh:
+- SG is not configured correctly
+- Check the route table for the subnet (routes traffice destined outside VPC to IGW) 
+- NACL is not configured correctly
+- Instance doesn't have a public IPv4
+- CPU load of the instance is high
+SSH v EC2 instance connect
+Connect using SSH: rule (can have one ip)
+
+instance connect: Allows aws ip range /29
+user uses es2 instance connet api which pushes one-time ssh public key (valid for 60seconds) to connect to the instance
+why you dont need your ssh key
+interface with the ec2 instance connect interface
+
+Puchasing options:
+on-demand :short workload, predictable pricing
+pay for what you use
+-Linux: billing per second, after the first minute
+All other OS (windows), billing per hour
+has highest cost but no upfront payment
+no long term commitment
+Recommended for short term and un-interrupted workloads, where you can't predict how the application will behave
+
+Reserved: (minimum 1 year)
+- Reserved instance: long workloads
+up to 75% discount compared to on-demand
+reservation period 1 or 3 year (3 year more discount)
+purchasing options, no upfront, partial upfront, all upfront (all upfront most discount)
+reserve a specific instance type
+recommended for stead-state usage applications (tink databas)
+- Convertible reserved instances: long workloads with flexible instances
+can change the ec2 type
+up to 54% discount
+- Scheduled reserved Instnaces: ex. every thursday between 3 and 6pm
+launch within time window you reserve
+when you require a fraction of day/week/month
+still commitment over 1 to 3 years
+
+Spot instances: short workloads, cheap, can lose instances (less reliable)
+can get up to 90% discounts compared to on-deman
+instances that you can "lose" at any point of time if your max price is less than the current spot price
+the most cost-efficient instances in aws
+useful for workloads that are resillient to failure (batch jobs, data analysis, image processing, any distributed workloads, workloads with a flexible start and end time)
+not suitable for critical jobs or database
+
+Dedicated hosts: book an entire physical server, control instance placement
+An amazon ec2 dedicated host is a physical server with ec2 instance capcaity fully dedicated to your use. Dedicated hosts can help you address compliance requirements and reduce costs by allowing you to use your existing server bound software licences.
+Allocated for your account for a 3-year period reservation
+more expensive
+Useful for software that have complicated licencing models (BYOL- bring your own licence)
+Or for companies that have strong regulatory or compliance needs
+
+EC2 dedicated instances:
+Instances running on hardware that's dedicated to you
+May share hardware with other instances in same account
+No control over inststance placement (can move hardware after stop/start)
+per instance billing
+less access to underlying hardware than dedicated hosts
+
+Spot instances:
+define max spot price and get the instance while current spot price < max
+- the hourly spot price varies based on offer ad capacity
+- if the current price > your max price you can choose to stop or terminate your instancewith 2 minutes grace period
+Spot Block
+- block spot instance during a specified time frame (1 to 6 hours) without interruptions
+- in rare instances, the instance may be reclaimed
+- used for batch jobs, data analysis or workloads that are resilient to failures
+
+requests type: one time or persistent
+persistent - valid from to valid until parameters
+so if a spot instance is stopped in persistent mode a new spot request will be made
+you can only cancel spot requests that are open, active or disabled. Canceling a spot request ddoes not terminate instances 
+you must first cancel a spot request, and then terminate the associated spot instances
+
+spot fleets:
+-spot fleets = set of spot instances + (optional) on-demand instances
+The spot fleet will try to meet the target capacity with price constraints
+- Define possible launch pools: instance type(m5.large), os, Availability zone
+- Can have multiple launch pools that the fleet can choose
+- spot fleet stops launching instances when reaching capacity or max cost
+Strategies to allocate spot instances:
+- lowestprice: from the pool with the lowest price (cost optimization, short workload)
+- diversified: distributed across all pools (great for availability, long workloads)
+- capacityOptimizes: pool with the optimal capacity for the number of instances
+
+Spot fleets allow us to automatically request Spot instances with the lowest price
+
+
+
 
 
 
