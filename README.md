@@ -399,6 +399,224 @@ Run command:
 - Can be invoked using EventBridge
 
 
+SSM automation
+- simplifies ommon maintenance and deployment tasks of EC2 instances and other AWS resources
+- Example: restart insatances, create and AMI, EBS, snapshots
+Automation Runbooks
+- SSM documents of type automation
+- Defines actions performed on your EC2 instances or AWS resources
+- Pre-defined runbooks (AWS) or create cutom runbooks
+Can be triggered
+- Manually using AWS console, AWS CLI or SDK
+- By amazon eventbridge
+- On a schedule using Maintenance Windows
+- By AWS Config for rules remediations
+
+SSM Parameter Store:
+- secure storage for configuration and secrets
+- Optional Seamless Encryption using KMS
+- Serverless, scalable, durable, easy SDK
+- Version tracking of configurations/secrets
+- Configuration management using papth & iam
+- Notifications with Cloudwatch Events
+- Integration with CloudFormation
+
+SSM Parameter store hierarchy
+./mydepartment/myapp/dev/
+-db.url
+-db.password
+like a file system
+can get passwords from amazon linux 2 ec2s
+can get secret ids from parameter store
+Advanced tier allows 100,000, 8kb max size of parameter value, parameter policies
+Parameter Policies:
+- allow to assign a ttl to a parameter (expiration dat) to force updating or deleting sensitive data such as passwords
+- Can assign multiple policies at a time
+
+SSM - Inventory
+- Collect metadata from your managed intances (EC2/On-prmises)
+- Metadata includes installed software, OS drivers, configurations, installed update, running services....
+- View data in AWS console or store in S# and query and analyze using Athena and QuickSight
+- specify metadat collections (minutes, hours, days)
+- Query data from multiple AWS accounts and regions
+- Create custom Inventory for your custom metadata (e.g. rack location of each managed instance)
+
+SSM - State Manager
+- automate the proces of keeping your managed instances (EC2/On-premises) in a state that you define
+- Use Cases: bootstrap instances with software, patch OS/Software updates on a schedule
+State Manager Association:
+- defines the state that you want to maintain to your managed instances
+- Ex. port 22 must be closed, antivirus must be installed
+- Specify a schedule when this configuration is pplied
+Uses SSM Documents to create an associations (e.g. SSM Document to configure CW Agent
+
+SSM- Patch Manager
+- Automates the process of patching managed instances
+- OS updates, applications updates, security updates,...
+- Supports both EC2 instances and on-premise servers
+- Supports Linux,  MacOS and Windows
+- Patch on demand or on a schedule using Maintenance Windows
+- Scan instances and generate patch compliance report (missing patches)
+- Patch compliance report can be sent to s3
+Patch Baseline
+- Defines which patches should and shouldnt be installed on your instances
+- Ability to create custom Patch Baseline (specify approver/rejected patches)
+- Patches can be auto-approved within days of their release
+- By default, install only critical patches and patches related to security
+Patch group
+- Associate a set of instances with a specific Patch Baseline
+- Ex: create Patch Groups for different environments (dev, test, prod)
+- Instances should be defined with the tag key Patch Group
+- An instance can only be in one Patch Group
+- Patch Group can be registered with only one Patch Baseline
+Maintenance Windows:
+- define a schedule for when to perform actions on your instnces
+- Ex. OS patching, updating drivers, installing software
+- Maintenance window contains: scedhule, duration, set of registered instances, set of registered tasks
+
+SSM Session Manager:
+- allows you to sart a secure shell on your EC2 and on-premises servers
+- Access through AWS console, AWS cli, or session Manager SDK
+- Does not need SSH access, bastion hosts or SSH keys
+- Supports Linux, MacOS and windows
+- Log connections to your instances and executed commands
+- Session log data can be sent to s3 or CloudWatch logs
+- Cloudtrail can intercept Start Session events
+IAM permissions
+- contorl which users/groups can access session manager and which instances
+- use tags to restrict accessss to only specific ec2 instances
+- access ssm + write to s3 + write to cloudwatch
+- Optionally, you can restrict commands a user can run in a session
+- - more control and compliance (everything is tracked)
+SSh needs inbound role with port 22 open
+SSM session manager needs iam permissions
+
+OpsWorks
+- Chef and puppet help you perform server configuration automatically, or repetitive actions
+- The work great with EC2 and On premises VM
+- AWS OpsWorks = Manager Chef and Puppet
+- It's an alternative to AWS SSM
+- chef and puppet needed -> OpsWorks
+-they help manage configuration as code
+helps in having consistent deployments
+Works with Linux/Windows
+Can automate user accounts, cron, ntp, packages, services ...
+They leverage "Recipes" or "Manifests"
+Chef/puppet have similarities with SSM/Beanstalk/CloudFormation but they are open source tools that work cros-cloud
+
+#Scalability and High Availabilit
+Scalability:
+- means that an application/system can handle greater loads by adapting
+- There are 2 kinds of scalability, vertical and horizontal (horizontal is also elasticity)
+- Scalability is linked but different to high availability
+Vertical Scalability:
+- means increasing the size of the instance
+- Vertical scalability is very common for non distributed systems such as databases
+- RDS, ElastiCache are services that can scale vertically
+- There's usually a limit to how much you can vertically scale (hardware limit)
+Horizontal Scalability:
+- means increasing the number of instances/systems for your application
+- implies distributed systems
+- common for web applications/modern applications
+- its easy to horizontally scales thanks to cloud offereings such as ec2
+High Availability
+- usually goes hand in hand with horizontal scaling
+- means running your application/system in at least 2 data centers (== Availability Zones)
+- The goal of high availability is to survive a data center loss
+- The high availability can be passive (for RDS Multi AZ for example)
+- The high availability can be active (for horizontal scaling)
+
+## Elastic Load Balancing
+- Load balancers are servers that forward internet traffic to multiple servers (EC2 instances) downstream
+Why use one?
+- spread oad across multiple downstream instances
+- Expose a single point of access (DNS) to your application
+- Seamlessly handle failures of downstream instances
+- Do regular health cheks to your instances
+- PRovide SSL termination (HTTPS) for your websites
+- Enforce stickiness with cookies
+- High availability across zones
+- Seperate public traffic from private traffic
+Why use an EC2 load balances
+an ELB (EC2 load balancer) is a managed load balancer
+- AWS guarantees that it will be working
+- AWS takes care of upgrades, maintenance and high availability
+- AWS provides only a few configuration knobs
+It costs less to setup your own load balancer but it will be a lot more effort on your end
+It is integrated with many AWS overings/services
+
+Health Checks
+- re crucial for load balancers
+- They enable the load balancers to know if instances it forwards traffic to are available to reply to requests
+- The health check is done on a port and a route (/health is common)
+- It the response is not 200 (OK), then the instance is unhealthy
+
+Types of Load balancers:
+AWS has 3 kinds of managed Load balancers
+- Classic Load balancer (v1 - old generation) -2009
+Http, https, tcp
+- Application Load Balancer (v2 - new generation) - 2016
+http, https, web socket
+- Network Load Balancer (v2 - new generation)- 2017
+tcp, TLS (secure tcp) and udp
+- Overall it is recommended to use the newer, v2, generation load balancers as they provide more features
+- You can setup internal (private) or external (public) ELBs
+- - LBs can scale but not instantaneously - contact AWS for a "warm up"
+Trouble shooting
+- 4xx errors are client induced errors
+- 5xx errors are application induced errors
+- Load balancer error 503 means at capacity or no registered target
+- if the LB can't connet to your application, check your security group.
+Monitoring
+- ELB access logs will log all access requests (so you can debug per request)
+- CloudWatch metrics will give you aggregate statistics (ex. connections count)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
