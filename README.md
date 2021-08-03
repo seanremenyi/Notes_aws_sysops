@@ -214,10 +214,189 @@ How you can avoid using Elasitc IP:
 - You could use a random public IP and register a DNS name to it
 - Or use a Load Balancer with a static hostname
 
+EC2 cloudwatch metrics:
+AWS provided metrics (AWS pushes them):
+- Basic monitoring (defualt): metrics are collected at a 5 min interval
+- Detailed Monitoring (paid): metrics are collected at a 1 minute interval
+- Includes CPU, Network, Disk, Status Check Metrics
+Custom metrics (yours to push):
+- Basic resolution: 1 minute resolution
+- High resolution: all the way doesn to 1 second resolution
+- Include RAM, application level metrics
+- Make Sure the IAM permissions on the EC2 instance rol are correct
 
+RC2 included metrics:
+- CPU: CPU utilization + credit usage/balance
+- Network: Network in/out
+- Status check: 
+Instance status = check the EC2 VM
+System status = check the underlying hardware
+- Disk Red/Write for ops/bytes (only for instance store)
+- RAM is not included
 
+Unified CloudWatch Agent
+- for virtual servers (EC2 instances, onpremises servers, ...)
+- collect additional system-level metrics such as RAM, process, used disk space, etc.
+- Collect logs to send to Cloudwatchlogs: No logs from inside your ec2 instance will be sent to Cloudwatch logs without using an agent
+- Centralized configuration using SSM Parameter store
+- make sure iam permissions are correct
+- Deafualt namespace for metrics collected by the unified Cloudwatch agent is CWAgent (can be configured/changed)
+procstat Plugin
+-Colect metrics and monitor system utilization of individual processes
+Supports both Linux and Windows servers
+Example: amount of time the preocess uses CPU, amount of memory the process uses, ...
+Select which processes to monitor by
+- pid_file: name of process identification number (PID) files they create
+- exe: process nam that match string you specify (RegEX)
+- pattern: command lines used to start the process (Regex)
+Metrics colected by procstat plugin begins with "procstat" prefix (e.g., procstat_cpu_time, procstat_cpu_usage,...)
 
+Status checks:
+- automatic checks to identify hardware and software issues
+System Status Checks
+- Monitos problems with AWS systems (software/hardware issues on the physical host, loss of system power,...)
+- Check personal health dashboard for any scheduled critical maintenance by AWS to your instance's host
+- Resolution: stop and start the instance (instance migrated to a new host)
+Instance Status Checks
+- monitors software/network configuration of your instance (invalid network configuration, exhausted memory,...)
+- resolution: reboot the instance or change instance configuration
+CW metrics & Recovery:
+CloudWatch metrics (1 minute interval)
+- StatusCheckFailed_System
+- StatusCheckFailed_Instance
+- StatusCheckFailed (for both)
+Option 1: CloudWatch Alarm
+- Recover EC2 instance with the same private/public IP, EIP, metadata and placement group
+- send notifications using SNS
+Option 2: Auto Scaling Group
+- set min/max/desired 1 to recover an instance but won't keep the same private and elastic IP
 
+EC2 hibernate:
+we know we can stop, terminate instances
+- Stop: the data on disk (EBS) is kept intact in the next start
+- Terminate: any EBS volumes (root also set-up to be destroyed is lost
+on the start, the following happens:
+- First start: the OS boots & the EC2 User Data script is run
+- Folowing starts: the OS boots up
+- Then your application starts, caches get warmed up and that can take time
+introducing EC2 hibernate:
+- The in-memory (RAM) state is perserved
+- The instance boot is much faster! (the OS is not stopped/restarted)
+- Under the hood: the RAM state is written to a file in the root EBS volume
+- The root EBS volume must be encrypted
+Use Cases:
+- long running processing
+- save the RAM statess
+- services that take time to initialize
+Good to know:
+- Supported instance familied - C3,4,5 M3,4,5, R3,4,5
+- instance ram size - must be less than 150 GB
+- intance size - not supported for bare metal instances
+- AMI - Amazon Linux 2, Linux AMI, Ubunut....Windows
+- Root Volume: must be EBS, encrypted, not instance store and large
+- Available on-demand and reserved instances
+- an instance cannot be hibernated more than 60 days
+
+## AMI
+AMI= Amazon machine image
+AMIs are a customization of an ec2 instance
+- you add your own software, configuration, operating system, monitoring....
+- faster boot/configuration time because all your software is pre-packaged
+AMI are built for a specific region (and can be copied across regions)
+You can launch EC2 instances from:
+- A public AMI: AWS provided
+- Your own AMI: you make and maintain them yourself
+- An AWS marketplace an AMI someone else made (and potentially sells)
+
+AMI process
+- Start an EC2 instance and customize it
+- stop the instance (for data integrity)
+- build an AMI - this will also create EBS snapshots
+- launch instances from other AMIs
+
+AMI no-reboot option
+- enables you to create an AMI without shutting down your instance
+- by default, it's not selected (AWS will shut down the instance before creating an AMI to maintain the file system integrity)
+With no-reboot enabled: Note: OS buffers are not flushed to disk before the snapshot is created
+
+AWS Backup plans to create AMI
+AWS backup doesn't reboot the instance while taking EBS snapshots (no-reboot behaviour)
+- This won't help you to create an AMI that guarantees file system integrity since you need to reboot the instance
+- To maintain integrity you need to provide the reboot parameter while taking images (EventBridge + Lambda + CreateImage API with reboot)
+
+EC2 instance migration between AZ
+take ami from instance in one az
+launch it in new az
+
+Cross account AMI sharing:
+- you can share an AMI with another AWS account
+- Sharing an AMI does not affect the ownership of the AMI
+- You can only share AMIs that have unecrypted volumes that are encrypted with a customer managed key
+- If you share an AMI with encrypted volumes, you must also share any customer managed keys used to encrypt them
+AMI sharing with KMS encryption:
+- must share the key with the target account
+Cross account AMI copy:
+- If you copy an AMI that has been shared with your account, you are the owner of the target AMI in your account
+- The owner of the source AMI must grant you read permissions for the storage that backs the AMI (EBS snapshot)
+- If the shared AMI has encrypted snapshots, the owner must share the key or keys with you as well
+- Can encrypt the AMI with your own CMK while copying
+
+EC2 image builder
+- used to automate the creation of VMs or container images
+- Automate the creation, maintain, validate and test ec2 AMIs
+- Can run on a schedule (weekly, whenever packages are updated)
+- free service (only pay for underlying resources)
+- builder - creates an ec2 (builds componenets) - build ami- test ec2 instance - ami is distributed
+
+AMI in production:
+- you can force users to only launch EC2 instances from pre-approved AMIs (AMIs tagged with specific tags) using IAM policies
+- Combine with AWS Config to find non-compliant EC2 instance (instnces launched with non-approved AMIs)
+
+Manage EC2 at scale
+## Systems Manager
+- Helps you manage your EC2 and On-Premises systems at scale
+- Get operational insights about the state of your infrastructure
+- Patching automation for enhanced compliance
+- Works for both Windows and linux OS
+- Integrated with CloudWatch metrics/dashboards
+- Integrated with AWs Config
+- Free service
+How it works:
+- We need to install the SSm agent onto the system we control
+- Installed by default on Amazon linux 2 AMI & some ubuntu ami
+- if n instance can't be controlled with SSM, its probably an issue with the SSM agent
+- Make sure the ec2 instances have the proper IAM role to allow SSM actions
+
+AWS Tags:
+- you can add text key-vaue pairs called Tags to many AWS resources
+- Commonly used in EC2
+- Free naming, common tags are Name, Environment, Team...
+Theyre used for:
+- Resource grouping
+- Automation
+- Cost Allocation
+- Better to have too many tags than to have too few
+Resource groups:
+- create, view or manage logical group of resources thanks to tags
+- Allows creation of logical groups of resources such as
+Applications, different loayers of an application stack, production versus development environments
+- Regional service
+- Works with EC2, S3, DynamoDB, Lambda, etc.
+
+SSM- Documents
+- Documents can be in JSON or YAML
+- you define parameters
+- you define actions
+- Many documents already exist in AWS
+Run command:
+- execture a document (=script) or just run a command
+- Run command across multiple instances (using resource groups)
+- Rate control/Error control
+- Integrated with IAM & CloudTrail
+- No need for SSH
+- Command Output can be shown in the console, sent to s3 bucket or clooudwatch Logs
+- Send notifications to SNS about command status ( In progress, success, failed)
+- Can be invoked using EventBridge
 
 
 
