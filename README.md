@@ -571,6 +571,10 @@ Monitoring
 - ELB access logs will log all access requests (so you can debug per request)
 - CloudWatch metrics will give you aggregate statistics (ex. connections count)
 
+Classic Load Balancers
+- Supports TCP (layer 4), http and https (layer 7)
+- Health checks are tcp or http based
+- fixed hostname xxx.region.elb.amazonaws.com
 
 
 
