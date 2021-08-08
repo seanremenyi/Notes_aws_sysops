@@ -576,10 +576,38 @@ Classic Load Balancers
 - Health checks are tcp or http based
 - fixed hostname xxx.region.elb.amazonaws.com
 
+Application Load Balancer (v2)
+- Application load balancer is layer 7 (http)
+- Load balancinf to multiple HTTP applications across machines (target groups)
+- Load Balancing to multiple applications on the same machine (ex. containers)
+- Supporot for HTTP/2 and Web Socket
+- Supports redirects (from HTTP to HTTPS for example)
+Routing tables to different target groups:
+- Routing based on path in URL (.com/a and .com/b)
+- Routing based on hostname in url (a.example.com and b.example.com
+ALB are a great fit for micro services & container-based applications (example: Docker and Amazon ECS)
+Has a port mapping feature to redirect to a dynamic port in ECS
+In comparison, we'd need multiple classic load ballancers per application
+Target Groups
+- EC2 instances (can be managed by an Auto Scaling group) - HTTP
+- ECS tasks (managed by ECS itself) - HTTP
+- Lambda functions - HTTP request is translated into a JSON event
+- IP addresses - must be private IPs
+- ALBs can route to multiple target groups
+- Health checks are done at the target group level
+Fixed hostname
+The application servers don't see the IP of the client directly
+- The true IP of the client is inserted in the header X-Forwarded-For
+- We can also get Port (X-Forwaded-Port) and proto (X-ForwardedProto)
 
-
-
-
+Network Load Balancer (v2)
+Network load balancers (Layer 4) allow you to:
+- Forward TCP and UDP trffice to your instance
+- Handles millions of requests per second
+- Less latency ~100ms (vs 400 ms for ALB)
+NLB has one static IP per AZ (no static dns name) and supports assigning Elastic IP (helpful for whitelisting specific IP)
+NLB are used for extreme performance TCP or UDP traffic
+Not included in the AWS free tier
 
 
 
