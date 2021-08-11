@@ -843,11 +843,20 @@ ASG - Dynamic scaling policie
 target Tracking Scaling:
 - Most simple and easy to set-up
 - Ex. I want the average ASG CPU to stay around 40%
-- Simple/Step Scaling
+Simple/Step Scaling:
+- When a Cluoudwtch alarm is triggered (ex cpu > 70%) then add 2 units
+- When a cloudwatch aarm is triggered (examplae cpu<30%) then remove 1
+Scheduled Actions:
+- Anticipate a scaling based on known usage patterns
+- Example: increase the min capacity to 10 at 5pm on fridays
+Predictive scaling:
+-predictive scaling: continuosly forecast load and schedule scaling ahead
 
-
-
-
+Good metrics to scale on:
+- SPUUtilization: Average CPU utilization across your instances
+- RequestCountPerTarget: to make sure the number of requests perec2 instances is stable
+- Average netowkr in/out (if you're application is network bound)
+- Any custom metric (that you push using CloudWatch
 
 
 
