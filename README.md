@@ -839,7 +839,11 @@ ASG Brain Dump:
 - Having instances under an ASG means that if they get terminated for whatever reason, the ASG will automatically create new ones as a replacement. Extra safety
 - ASG can terminate instances marked as unhealthy by an LB (and hence replce them)
 
-
+ASG - Dynamic scaling policie
+target Tracking Scaling:
+- Most simple and easy to set-up
+- Ex. I want the average ASG CPU to stay around 40%
+- Simple/Step Scaling
 
 
 
