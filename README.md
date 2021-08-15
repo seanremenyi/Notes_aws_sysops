@@ -863,12 +863,75 @@ Scaling cooldown
 - During the cooldown period, the ASG will not launch or terminate additional instances (to allow for metrics to stabilize)
 - Advice: Use a ready-to-use AMI to reduce configuration time in order to be serving requests faster and reduce the cooldown period
 
+Lifecycle hooks
+- By default, as soon as an instance is launched in an ASG it's in service
+- You can perform extra steps before the instance goes in service (Pending state)
+- - Define a script to run on the instances they start
+- You can perform some actions before the instance is terminated (teminating state)
+- - Pause the instances before they're terminatinated for troubleshooting
+- Use Cases: cleanup, log extraction, special heath checks
+- Integration with EventBridge, SNS and SQS
 
+Launch Configuration vs Launch Template
+both:
+- ID of the AMI, the instance type, a key pair, security groups and the other parameters that you use to launch EC2 instances (tags, EC2 user-data)
+- You can't edit both launch configuations and launch templates.
+Launch Configuration (legacy):
+- Must be re-created every time
+Launch template (newer):
+- Can have multiple versions
+- Create parameters subsets (partial configuration for re-use and inheritance)
+- Provision using both On-Demand and Spot instances (or a mix)
+- Supports Placement Groups, Capacity reservations, dedicated hosts, multiple instance types
+- Can use T2 unlimited burst feature
+- Recommended by AWS going forward
 
+Health Checks:
+- To make sure you have high availability, means you have at least 2 instances running across 2 AZ in your ASG (must configure multi-AZ ASG)
+- Health checks available:
+- - EC2 Status checks
+- - ELB health cheacks
+- - Custom health checks: sends instance's health to ASG using AWS CLI or AWS SDK
+- ASG will launch a new instance after terminating an unhealthy one
+- ASG will not reboot unhealthy hosts for you
+- Good to know cli:
+- - set-instance-health (use with Custom Health Checks)
+- - terminate-instance-in-auto-scaling-group
 
+Troubleshooting ASG issues:
+-<number of instances> instance(s) are already running. Launching EC2 instance failed.
+- - The auto scaling group has reached the limit set by the MaximumCapacity parameter. Update your Auto Scaling group by providing a new value for the maximum capacity.
+- Launching Ec2 instances is failing:
+- - The security group does not exist. SG might have been deleted
+- - The key pair does not exist. The key pair might have been deleted
+- If the ASG fails to launch an instance for over 24 hours, it will automatically suspend the processes (administration suspension)
 
+Cloudwatch metrics for ASG:
+- Metrics are collected every 1 minute
+- ASG- level metrics (opt-in)
+- - GroupMinSize, GroupMaxSize, GroupDesireCapacity
+- - GroupInServiceInstances, GroupPendingInstances, GroupStandbyInstances
+- - GroupTerminatingInstances, GroupTotalInstances
+- - You should enable metric collection to see the metrics
+- EC2-level metrics (enabled): CPU Utilization, etc...
+- - Basic monitoring: 5 minutes granularity
+- - Detailed monitoring: 1 minute granularity
 
-
+AWS Auto scaling
+- Backbone service of auto scaling for scalable resources in AWS:
+- Amazon EC2 auto scaling groups: Launch or terminate EC2 instances
+- Amazon EC2 Spot Fleet requests: Launch or terminate instances from a spot fleet request, or automatically replace instances that get interrupted for price or capacity reasons.
+- Amazon ECS: Adjust the ECS servicce desired count up or down
+- Amazon DynamoDB (table or global secondary index): WCU & RCU
+- Amazon Aurora: Dynamic Read Replicas Auto Scaling
+Scaling Plans:
+Dynamic scaling: creates a target tracking scaling policy
+- Optimize for availability => 40% of resource utiliation
+- Balance availability and cost => 50% of resource utilization
+- Optimize for cost => 70% of resource utilization
+- Custom => choose your own metric and target value
+- Options: Disable scale-in, cooldown period, warmup time (for ASG)
+Predictive scaling: continuously forecast load and schedule scaling ahead
 
 
 
