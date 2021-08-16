@@ -933,6 +933,64 @@ Dynamic scaling: creates a target tracking scaling policy
 - Options: Disable scale-in, cooldown period, warmup time (for ASG)
 Predictive scaling: continuously forecast load and schedule scaling ahead
 
+## Beanstalk
+Developer problems on AWS:
+- Managing infrastructure
+- Deploying Code
+- Configuring all the databases, ,load balancers, etc
+- Scaling concerns
+- Most web apps hve the same architecture (ALB + ASG)
+- All the developers want is for their code to run!
+- Possibly, consistently across different applications and environments
+Overview:
+- Elastic Beanstalk is a developer centric view of deploying an application on AWS
+- It uses all the components we've seen before, EC2, ASG, ELB, etc.
+- But it's all in one view that's easy to make sense of
+- We still have full control over the configuration
+- Beanstalk is free but you py for the underlying instances
+Elstic Beanstalk:
+Managed service
+- Instance configuration/os is handled by beanstalk
+- Deployment strategy is configurable but performed by Elasstic Beanstalk
+Just the application code is the responsibility of the developer
+Three architecture models:
+- Single instance deployment: good for dev
+- LB +ASG: great for production or pre-production web applications
+- ASG only: great for non-web apps in production (workers, etc.)
+
+3 components:
+- Application
+- Application version: each deployment gets assigned a version
+- Environment name (dev, test, prod): free naming
+You deploy application versions to environments and can promote application versions to the next environment
+Rollback feature to previous versions
+Full control over lifecycle of environments
+
+Support for many platforms:
+- Go, Java SE, Java with Tomcat, .NET on windows Server with IIS, Node.js, PHP, Python, Ruby, Packer Builder, Single container Docker, Multicontainer Docker, Preconfigured Docker
+- If not supported, you can write your custom platform (advanced)
+
+## CloudFormation
+Infrastructure as code:
+- Currently we have been doing a lot of manual work
+- All this manual work will be very tough to reproduce:
+- - In another region
+- - In another AWS account
+- - ithin the same region if everything was deleted
+- Wouldn't 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
