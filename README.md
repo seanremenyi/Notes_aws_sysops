@@ -1066,6 +1066,138 @@ When to use?
 - If so, use  parameter
 - You won't have to re-upload a template to change its content
 
+Parameters can be controlled by all these settings:
+Type:
+- String
+- Number
+- CommaDelimitedList
+- List<Type>
+- AWS Parameter (to help catch invalid values - match against existing values in the AWS Account)
+Description
+Constraints
+ConstraintDescription(string)
+Min/MaxLength
+Min/Max Value
+Defaults
+AllowedValues (array)
+AllowedPattern (regexp)
+NoEcho
+
+How to reference a Parameter
+- The FN::Ref function can be leveraged to reference parameters
+- Parameters can be used anywhere in a template
+- The shorthand for this in Yaml is !Ref
+- The function can also refereence other elements within the template
+
+Concept: Pseudo Parameters
+- AWS offers us pseudo parameters in any Cloudformation template
+- These can be used at any time and are enabled by default
+
+Mappings:
+- Mappings are fixed variables within your CloudFormation Template
+- They're very handy to differentiate between different environments (dev vs. prod), regions (AWS regions), AMI types, et.c
+- All the values are hardcoded within the template
+
+When would you use mappings vs. parameters:
+Mappings are great when you know in advance all the values that can be taken and that they can be deduced from variables such as
+- Region 
+- Availability Zone
+- AWS Account
+- Environment (dev vs. Prod)
+- Etc.
+They allow safer control over the template
+Use parameters when the values are really user specific
+
+FN::FindInMap
+- We use FN::FindInMap to return value from a specific key
+- !FindInMap [ MapName, TopLevelKey, SecondLevelKey]
+
+Outputs:
+- The outputs section declares optional outputs values that we can import into other stacks (if you export them first)
+- You can also view the outputs in the AWS console or in using the AWS CLI
+- They're very useful for example if you define a network CloudFormation, and output the variables such as VPC ID and your Subnet IDs
+- It's the best way to perform some collaboration cross stack, as you let expert handle their own part of the stack
+- You can't delete a CloudFormation Stack if it's outputs are being referenced by another CloudFormation stack
+
+Cross Stack Reference
+- We can create a second template that leverages that security group 
+- For this we use the FN::ImportValue function
+- You can't delete the underlying stack until all the references are deleted too
+
+Conditions:
+Conditions are used to control the creation of resources or outputs based on a condition
+Condtions can be whatever you want them to be, but common ones are
+- Environment (dev/test/prod)
+- AWS Region
+- ny parameter value
+Each condition can reference another condition, parameter value or mapping
+The logical ID is for you to choose, It's how you name condition
+The intrinsic function (logical) can be any of the following:
+- Fn::And
+- Fn::Equals
+- Fn::If
+- Fn::Not
+- Fn::Or
+
+Intrinsic Functions:
+- Ref
+- Fn::GetATT
+- Fn::FindInMap
+- Fn::ImportValue
+- Fn::Join
+- Fn::Sub
+- Condition Functions (Fn::If, Fn::Not, Fn::Equals, etc...)
+
+Fn::Ref
+The Fn::Ref function can be leveraged to reference
+- Parameters => returns the value of the parameter
+- Resources => returns the physical ID of the underlying resource (ex. EC2 ID)
+The shorthand for this YAML is !Ref
+
+Fn::GetAtt
+Attributes are attached to any resource you create
+to know the attributes of your resources, the best place to look is the documentation
+For example: the AZ of the EC2 machine
+
+Fn::Join
+Join values with a delimiter
+
+Fn::Sub
+- Fn::Sub or !Sub as a shorthand, is used to substitue variables from a test. It's a very handy function that will allow you to fully customize your templates
+- For example, you can combine Fn::Sub with references or AWS Pseudo variables!
+- String must contain ${VariableName} and will substitute them
+
+User Data in EC2 in CloudFormation
+- The important thing to pass is the entire script through the function Fn::Base64
+- Good to know: user data script log is in /var/log/cloud-init-output.log
+
+cfn-init
+- AWS::CloudFormation::Init must be in the MEtadate of a resource
+- With the cfn-init script, it helps make complex EC2 configurations readable
+- The Ec2 instance will query the CloudFormation srvice to get init data
+- Logs go to /var/log/cfn-init.log
+
+cfn-signal & wait conditions
+- We still don't know how to tell CloudFormation tht the Ec2 instance got properly configured after cfn-init
+For this, we can use the cfn-signal script!
+- We can run cfn-signal right after cfn-init
+- Tell CloudFormation service to keep on going or fail
+We need to define WaitCondition:
+- Block the template until it receives a signal from cfn-signal
+- We attach a CreationPolicy (also works on ec2, ASG)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
