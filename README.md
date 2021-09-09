@@ -1185,6 +1185,1139 @@ For this, we can use the cfn-signal script!
 We need to define WaitCondition:
 - Block the template until it receives a signal from cfn-signal
 - We attach a CreationPolicy (also works on ec2, ASG)
+Failures and Troubleshooting:
+- Ensure that the AMI you're using has the AWS CloudFormation helper scripts installed. If the AMI doesn't include the helper scripts, you can also download them to your instance.
+- Verify that the cfn-init &cfn-signal command was successfully run on the instance. You can view logs, such as var/log/cloud-init.log or /var/log/cfn-init.log, to help you debug the instance launch.
+- You can retrieve the logs by logging in to your instance, but you must disable rollback on failure or else AWS CloudFormation deletes the instance after your stack fails to create.
+- Verify that the instance has a connection to the internet. If the instance is in a VPC, the instance should be able to connect to the Internet through a NAT device if it's in a private subnet or through an Internet Gateway if it's in a public subnet
+- For example run a curl command.
+
+Rollbacks:
+Stack Creation Fails:
+- Default: everything rolls back (gets deleted). We can look at the log
+- Option to disable rollback and trouble shoot what has happened
+Stack Update Fails:
+- The stack automatically rolls back to the previous known working state
+- Ability to see in the log what happened and error messages
+Update rolling back: if the rollback fails
+
+Nested Stacks:
+- Nested stacks are stacks as part of other stacks
+- They allow you to isolate repeated pattersn/ common componenets in seperate stacks and call them from other stacks
+- Ex. Load Balancer configuration that is re-used
+- Nested stacks are considered best practice
+- To update a nested stack, always update the parent (root stack)
+
+ChangeSets:
+- When you update a stack, you need to know what changes before it happens for greater confidence
+- ChangeSets won't say if the update will be successful
+
+Drift:
+- Cloudformation allows you to create infrastructure
+- But it doesn't protect you against manual configuration changes
+- How do we know if our resources have drifted
+- We can use CloudFormation Drift
+- stack actions -> detect drict
+- stack actions -> drift
+
+Retain Data on Deletes:
+- You can put a DeletionPolicy on any resource to control what happens when the CloudFormation template is deleted
+DeletionPolicy=Retain:
+- Specify on resources to preserve / backup in case of Cloudformation deletes
+- To keep a resource, specify Retain (works for any resource / nested stack)
+DeletionPolicy=Snapshot
+- EBS volume, Elasticache cluster, Elasticache ReplicationGroup
+- RDS DBInstance, RDS DBCluster, Redshift Cluster
+DeletionPolicy=Delete (default policy)
+- Note: For AWS::RDS::DBCluster resources, the default policy is Snapshot
+- Note: to delete an S3 bucket, you need to first empty the bucket of its content
+
+Termination protection on stacks:
+To prevent accidendat deletes of CloudFormation templates, use TerminationProtection
+
+CloudFormation StackSets:
+- Create,update or delete stacks across multiple accounts and regions with a single operation
+- Administrator account to create StackSets
+- Trusted accounts to create, update, delete stack instances from StackSets
+- When you update a stackset, all associated stack instances are updated throughout all acoounts and regions
+- Ability to set a maximum concurrent actions on targets (# or %)
+- Ability to set failure tolerance (# or %)
+
+## EBS
+- An EBS (elastic block store) Volume is a network drive you can attach to your instance while they run 
+- It allows your instances to persist data, even after their termination
+- They can only be mounted to one instance at a time (Or multi attach feature for some EBS)
+- They are bound to a specific availability zone
+- Analogy: Think of them as a "network USB stick"
+- Free tier : 30 GB of free EBS storage of type General purpose (SSD) or magnetic per month
+It's a network drive (not a physical drive)
+- It uses the network to communicat the instance, which means there might be a bit of latency
+- It can be detached from an EC2 instance and attached to another one quickly
+Its locked to an AZ:
+- An EBS volume in us-east-1a cannot mbe attched to us-east-1b
+- To move a volume across, you first need to snapshot it
+Have provisioned capacity (size in GBs and IOPS)
+- You get billed for all the provisioned capacity
+- You can increase the capacity of the drive over time
+Delete on termination:
+- Controls the EBS behaviour when an ec2 instance terminated
+- By default, the root EBS volume is deleted (Attribute enabled)
+- Be default, any other attached EBS volume is not deleted (attribute disabled)
+- This can be controlled by the AWS console/ AWS CLI
+- Use case: preserve root volume when instance is terminated
+
+Instance Store:
+- EBs volumes are network drives with good but "limited" performance
+- If you need a high-performancee hardware disk, use EC2 Instance Store
+- Better I/O performance
+- EC2 Instance Store lose their storage if they're stopped (ephemeral)
+- Good for buffer/cache/scratch data/temporary content
+- Risk of data loss if hardware fails
+- Backups and Replication are your responsibility
+
+Volume types:
+- gp2/gp2 (SSD): General Purpose SSD volume that balances price and performance for a wide variety of workloads
+- io 1/ io2 (SSD): HIghest-performance SSD volume for mission-critical low latency or high or high-throughput workloads
+- st 1 (HDD): low cost HDD volume designed for frequently accessed, throughput-intensive workloads
+- sc 1 (HDD): Lowest cost HDD volume designed for less frequently access workloads
+EBS volumes are characterized in Size/Throughput/IOPS (I/O ops per second)
+When in doubt always consult the AWS documentation -it's good
+Only gp2/gp3 and io1/io2 can be used as boot vlumes
+
+General puporse SSD:
+- cost effective storage, low latency
+- system boot volumes, Virtual desktops, Development and test environments
+- 1GB - 16TiB
+gp3:
+- Baseline of 3,000 IOPS and throughput 125 MB/s
+- Can increase IOPS up to 16,000 and throughput up to 1000 Mb/s independently
+gp2:
+- Small gp2 volumes can burst IOPS to 3,000
+- Size of the volume and IOPS are linked, max IOPS is 16,000
+- 3 IOPS per GB, means at 5,334 GB we are at the max IOPS
+
+Provisioned IOPS (PIOPS) SSD:
+- Critical business applications with sustained IOPS performance
+- Or applications that need more than 16,000 IOPS
+- Great for database workloads (sensitive to storage perf and consistency)
+io1/io2 (4Gb - 16 TB):
+- Max PIOPS: 64,000 for Nitro EC2 instances and 32,000 for other
+- Can increase PIOPS independently from storage size
+- io2 have more durability and more IOPS per GB (at the same price as io1)
+io2 Block Express (4GB- 64TB)
+- Sub-ms latency
+- Max PIOPS: 256,000 with an IOPS:GB ratio of 1000:1
+Supports EBS Multi-Attach
+
+Hard Disk Drives (HDD):
+- Cannot be a boot volume
+- 125 MB to 16 TB
+Throughput Optimized HDD(st1):
+- Big Data, Data Warehouses, Log Processing
+- Max throughput 500MB - max IOPS 500
+Cold HDD (sc1):
+- For data that is infrequently accessed
+- Scenarios where lowest cost is important
+- Max throughput 250 Mb/s - max IOPS 250
+
+EBS Multi-Attach - io1/io2 family
+- Attach the same EBS volume to multiple EC2 instances in the same AZ
+- Each instance has full read and write permissions to the volume
+Use Cases:
+- Acheive higher application availability in clustered linux applications (ex. Teradata)
+- Applications must manage concurrent write operations
+Must use a file system that's cluster-aware (Not XFS, EX4, etc.)
+
+
+EBS Volume Resizing:
+You can only increase the EBS volumes:
+- size (any volume type)
+- IOPS (only in IO1)
+After resizing an EBS volume, you need to repartition your drive
+After increasing the size, it's possible for the volume to be in a long time in the "optimization" phase. The volume is still usable
+You can't decrease the size of your EBS volume (create another smaller volume then migrate data)
+
+EBS Snapshots
+- Make a backups (snapshot) of your EBS volume at a point in time
+- Not necessary to detach volume to do snapshot, but recommended
+- Can copy snapshots across AZ or Region
+
+Amazon Data Lifecycle Manager
+- Automate the creation, retention and deletion of EBS snapshots and EBS-backed AMIs
+- Schedule backups, cross-account snapshot copies, delete outdated backups, ...
+- Uses resource tags to identify the resources (EC2 instances, EBS volumes)
+- Can't be used to manage snapshots/AMIs created outside DLM
+- Can't be used to manage instance store backed AMIS
+
+Fast Snapshot Restore (FSR)
+- EBS Snapshots stored in S3
+- By default, there's a latency of I/O operations the first time each block is accessed (block must be pulled from S3)
+- Solution: force the initialization of the entire volume (using the dd or fio command) or you can enable FSR
+- FSR helps you to create a volume from a snapshot that is fully initialized at creation (no I/O latency)
+- Enabled for a snapshot in a particular AZ (billed per minute - very expensive $$$)
+- Can be enabled on snapshots created by Data Lifecycle Manager
+
+Volume Migration:
+- EBS Volumes are only locked to a specific AZ
+To migrate it to a different AZ (or region):
+- Snapshot the volume
+- (optional) Copy the volume to a different region
+- Create a volume from the snapshot in the AZ of your choice
+
+Encryption:
+When you create an encrypted EBS volume, you get the following:
+- Data at rest is encrypted inside the volume
+- All the data in flight moving between the instance and the volume is encrypted
+- All snapshots are encrypted
+- All volumes created from the snapshot
+Encryption and decryption are handled transparently (you have nothing to do)
+Encryption has a minimal impact on latency
+EBS Encryption leverages keys from KMS (AES-256)
+Copying an unencrypted snapshot allows encryption
+Snapshots of encrypted volumes are encrypted
+
+encrypt an unencrypted EBS volume:
+- Create an EBS snapshot of the volume
+- Encrypt the EBS snapshot (using copy)
+- Create new EBS volume from the snapshot (the volume will also be encrypted)
+- Now you can attach the encrypted volume to the original instance
+
+## EFS
+- Managed NFS (network file system) that can be mounted on many EC2
+- EFS works with EC2 instances in multi-AZ
+- Highly available, scalable, axpensive (3x gp2), pay per use
+- Use cases: content management, web serving, data sharing, wordpress
+- Uses NFSv4.1 protocol
+- Uses security group to control access to EFS
+- Compatible with Linux based AMI (not Windows)
+- Encryption at rest using KMS
+- POSIX file system (~ Linux) that has a standard file API
+- File system scales automatically, pay-per-use, no capacity planning
+
+EFS scale
+- 1000s of concurrent NFS clients, 10 GB +/s throughput
+- Grow to Petabyte-scale network file system automatically
+Performance mode (set at EFS creation time):
+- General Purpose (default): latency- sensitive use cases (web servers, CMS, etc...)
+- Max I/O - higher latency, throughput, highly parallel (big data, media processing)
+Throughput mode
+- Bursting (1 TB = 50 MB/s + burst of up to 100 MB/s)
+- Provisioned: set your throughput regardless of storage size, ex: 1 GB/s for 1TB storage
+Storage Tiers (lifecycle management feature - move file after N days)
+- Standard: For frequently accessed files
+- Infrequent access (EFS-IS): cost to retrieve files, lower price to store
+
+EFS vs. EBS
+EBS:
+- can be attached to only one instance at a time
+- are locked at the Availability zone (AZ) level
+- gp2: IO increases if the disk size increases
+- io1: can increase IO independently
+To migrate an EBS volume across AZ:
+- Take a snapshot
+- Restore the snapshot to another AZ
+- EBS backups use IO and you shouldn't run them while your application is handling a lot of traffic
+Root EBS Volumes of instances get terminated by default if the EC2 instance gets terminated (you can disable that)
+EFS:
+- Mounting 100s of instances across AZ
+- EFS share website files (wordpress)
+- Only for linux Instances (POSIX)
+- EFS has a higher price point than EBS
+- Can levergae EFS-IA for cost savings
+
+EFS - Access Points:
+- Easily manage applications access to NFS environments
+- Enforce a POSIX user and group to use when accessing the file system
+- Restrict access to a directory within the file system and optionally specify a different root directory
+- Can restrict access from NFS clients using IAM policies
+
+EFS - Operations:
+Operations can be done in place:
+- Lifecycle Policy (enable IA or change IA settings)
+- Throughput Mode and Provisioned Throughput Numbers
+- EFS Access Points
+Operations that require a migration using DataSync (replicated all file attributes and metadata)
+- Migration to encrypted EFS
+- Performance Mode (e.g. Max IO)
+
+CloudWatch Metrics:
+PercentIOLimit:
+- How close the file system reaching the I/O limit (General Purpose)
+- If at 100% move to Max I/O (migration)
+BurstCreditBalance
+- The number of burst credits the file system can use to achieve higher throughput lovels
+StorageBytes:
+- File system's size in bytes (15 minute interval)
+- Dimensions: Standard, IA, Total (Standard + IA)
+
+## S3 
+- Amazon s3 allows people to store objects (files) in "buckets" (directories)
+- Buckets must have a globally unique name
+- Buckets are defined at the regional level
+Naming Convention
+- No uppercase
+- No underscore
+- 3-63 characters long
+- Not an IP
+- Must start with lowercase letter or number
+
+Ojects
+Objects (files) have a key
+The key is the full path
+The key is compose of prefix + object name
+There's no concept of "directories" within buckets (although the UI tricks you into thinking otherwise)
+Just keys with very long names that contain slashes
+object values are the content of the body:
+- Max object size if 5TB 
+- If uploading more than 5GB, must use "multi-part upload"
+Metadata (list of text key/ value pairs - system or user metadata)
+Tags (Unicode key / value pair - up to 10) - useful for security/lifecycle
+Version ID (if versioning is enabled)
+
+Versioning:
+- You can version your files in Amazon S3
+- It is enabled at the bucket level
+- Same key overwrite will increment the version: 1, 2, 3
+It is best practice to version your buckets:
+- Protect against unintended deletes (ability to restore a version)
+- Easy roll back to previous version
+Notes:
+- Any file that is not versioned prior to enabling versioning will have version "null"
+
+Encryption:
+There are 4 methods to encrypt obects in s3:
+- SSE-S3: encrypts S3 objects using keys handled & managed by AWS
+- SSE-KMS: leverage AWS Key Management Service to manage encryption keys
+- SSE-C: when you want to manage your own encryption keys
+- Client Side Encryption
+It's important to understand which ones are adapted to which situation for the exam 
+
+SSE-S3
+- encryption using keys handled & managed by Amazon s3
+- Object is encrypted server side
+- AES-256 encryption type
+- Must set header: "x-amz-server-side-encryption":"AES256"
+
+SSE-KMS
+- encryption using keys handled & managed by KMS
+- KMS advantages: user control + audit trail
+- Object is encrypted server side
+- Must set header: "x-amz-server-side-encryption":"aws:kms"
+
+SSE-C
+- server side encryption using data keys fully managed by the customer outside of AWS
+- Amazon S3 does not store the encryption key you provide
+- HTTPS must be used
+- Encryption key must provided in HTTP headers, for every HTTP request made
+
+Client Side Encryption
+- Client library such as the Amazon S3 Encryption Client
+- Clients must encrypt data themselves before sending to S3
+- Clients must decrypt data themselves when retrieving from s3
+- Customer fully manages the keys and encryption cycle
+
+Encryption in transit (SSL/TLS)
+Amazon S3 exposes:
+- HTTP endpoint: non encrypted
+- HTTPS endpoint: encryption in flight
+You're free to use the endpoint you want but HTTPS is recommended
+Most clients would use the HTTPS endpoint by default
+HTTPS is mandatory for SSE-C
+Encryption in flight is also called SSL/TLS
+
+Security:
+User-Based
+- IAM policies - which API calls should be allowed for a specific user from IAM
+Resource Based:
+- Bucket Policies - bucket wide rules from the S3 console - allows cross account
+- Object Access Control List (ACL) - finer grain
+- Bucket Access Control List (ACL) - less common
+Note: an IAM principal can access an S3 object if
+- the user IAM permissions allow it OR the resource policy ALLOWS it
+
+S3 Bucket Policies
+JSON based policies
+- Resources: buckets and objects
+- Actions: Set of API to allow or Deny
+- Effect: Allow/Deny
+- Principal: The account or user to apply the policy to
+Use S3 bucket policy to:
+- Grant public access to the bucket
+- Force objects to be encrypted at upload
+- Grant access to another account (Cross account)
+
+Bucket Settings for Block Public Access
+Block public access to buckets and objects granted through
+- new access control lists (ACLs)
+- any access control lists (ACLs)
+- new public bucket or access point policies
+Block public and cross-account access to buckets and objects through any public bucket or access point policies
+These settings were created to prevent company data leaks
+If you know your bucket should never be public, leave these on
+Can be set at the account level
+
+Other Security:
+Networking:
+- Supports VPC Endpoints (for instance in VPC without www internet)
+Logging and Audit:
+- S3 access Logs can be stored in other S3 bucket
+- API calls can be logged in AWS CloudTrail
+User Security:
+- MFA Delete: MFA (multi factor authentication) can be required in versioned buckets to delete objects
+- Presigned URLs: URLs that are valid only for a limited time (ex: premium video service for logged in users)
+
+Websites:
+- S3 can host static websites and have them accessible to the www
+The website URL will be 
+bucket-name.s3-website-AWS-region.amazonaws.com
+If you get a 403 (forbidden) error, make sure the bucket policy allows public reads
+
+CORS:
+an origin is a scheme (protocol), host(domain) and port
+CORS means cross-origin resource sharing
+Web browser based mechanism to allow requests to other origins while visiting the main origin
+The requests won't be fulfilled unless the other origin allows for the requests, using CORS headers (ex: Access-Control-Allow-Origin)
+
+S3 CORS:
+If a client does a cross-origin request on our S3 bucket, we need to enable the correct CORS headers
+It's a popular exam question
+You can allow for a specific origin or for * (all origins)
+
+Consistency Model
+- Strong consistency as of December 2020:
+After a:
+- successful write of a new object (new PUT)
+- or an overwrite or delete of an existing object (overwrite PUT or DELETE)
+any:
+- subsequent read request immediately receives the latest version of the object (read after write consistency)
+- subsequent list request immediately reflects changes (list consistency)
+Available at no additional cost, without any performance impact
+
+S3- MFA Delete
+- MFA (multi-factor authentication) forces user to generate a code on a device (usually a mobile phone or hardware) before important operations on S3
+- To use MFA-Delete, enable Versioning on the bucket
+You will need MFA to 
+- permanently delete an object version
+- suspend verioning on the bucket
+You won't need MFA for
+- enabling versioning
+- listed deleted versions
+Only bucket owner (root account) can enable/disable MFA-Delete
+MFA-Delete curently can only be enabled using the CLI
+
+S3 Default Encryption
+- One way to "forcee encryption" is to use a bucket policy and refuse any API call to PUT an S3 object without encryption headers
+- Another way is to use the "default encryption" option in S3
+- Note: Bucket policies are evaluated before "default encryption"
+
+S3 Access Logs
+- For audit purposes, you may want to log all access to S3 buckets
+- Any request made to S3, from any account, authorized or denied, will be logged into another s3 bucket
+- That data can be analyzed using data analysis tools
+- Or athena as we'll see later in this section
+Warning:
+- Do not set your logging bucket to be the monitored bucket
+- It will create a logging loop and your bucket will grown in size exponentially
+
+S3 Replication:
+- Must enable versioning in source and destination
+- CRR cross region replication
+- SRR Same region replication
+- Buckets can be in different accounts
+- Copying is asynchronous
+- Must give proper IAM permissions to s3
+CRR use cases: compliance, lower latency access, replication across accounts
+SRR use cases: log aggregation, live replication between production and test accounts
+Notes:
+- After activating, only new objects are replicated (not retroactive)
+For delete operations:
+- Can replicate delete markers from source to target (optional setting)
+- Deletions with a version ID are not replicated (to avoid malicious deletes)
+There is no "chaining" of replication
+- If bucket ! has replication into bucket 2, which has replication into bucket 3
+- Then objects created in bucket 1 are not replicated to bucket 3
+
+Pre-signed URLS:
+can generate pre-signed URLs using SDK or cli
+- For downloads (easy, can use the cli)
+- for uploads (harder, must use the SDK)
+Valid for a default of 3600 seconds, can change timeout with --expires-in [TIME_BY_SECONDS] argument
+USers given a pre-signed URL inherit the permissions of the person who generated the URL for Get/put
+Examples:
+- Allow only logged-in users to download a premium video on your S3 bucket
+- Allow an ever changing list of users to download files by generating URLs dynamically
+- Allo temporarily a user to upload a file to a precise location in our bucket
+
+S3 Inventory
+- List objects and their corresponding metadata (alternative to S3 List API operation)
+Usage examples:
+- Audit and report on the replication and sncryption status of your objects
+- Get the number of objects in an S3 bucket
+- Identify the toal storage of previous object versions
+Generate daily or weekly reports
+Output files: CSV, ORC or Apache Parquet
+You can query all the data using Amazon Athena, Redshift, Presto, Hive, Spark...
+You can filter generated report using S3 Select
+USe cases: Business, Compliance, Regulatory needs,...
+
+S3 Storage Classes
+- Amazon S3 Standard - General Purposes
+- Amazon S3 Standard- Infrequent Access (IA)
+- Amazon S3 One Zone- Infrequent Access
+- Amazon S3 Intelligent Tiering
+- Amazon Glacier 
+- Amazon Glacier Deep Archive
+- Amazon S3 Reduced Redundancy Storage (deprecated - omitted)
+
+Standard - General Purpose:
+- High Durability (99.999999999%) of objects acreoss multiple AZ
+- If you store 10,000,0000 objects with Amazon S3, you can on average expect to incur a loss of a single object once every 10,000 years
+- 99.99% availability over a given year
+- Sustain 2 concurrent facility failures
+- Use cases: Big Data analytics, mobile & gaming applications, content distribution
+
+Amazon S3 Standard- Infrequent Access (IA):
+- Suitable for data that is less frequently accessed but requires rapid access when needed
+- Same durability
+- 99.9% Availability
+- Low cost compared to S3 standard
+- Sustain 2 concurrent facility failures
+- Use Cases: As a data store for disaster recovery backups
+- 30 day minimum
+
+Amazon S3 One Zone- Infrequent Access
+- Same as IA but data is stored in a single AZ
+- Same durability but if AZ is destroyed, data will be lost
+- 99.5% Availability
+- Low latency and high troughput performance
+- Supports SSL for data at transit and encryption at rest
+- Low cost compared to IA (by 20%)- Use Cases: Storing secondary backup copies of on-premise data, or storing data you can create
+- 30 day minimum
+
+Amazon S3 Intelligent Tiering:
+- Same latency and high throughput performance of s3 standard
+- small montly monitoring and auto-tiering fee
+- Automatically moves objects between 2 access tiers based on changing access patterns
+- Designed for durability 99.999999999% of objects across multiple Availability Zones
+- Resilient against events that impact an entire Availability Zone
+- Designed for 99.9% availability over a given year
+- 30 day minimum
+
+Amazon Glacier:
+- Low cost object storage meant for archiving/backup
+- Data is retained for longer term (10s of years)
+- Alternative to on-premises magnetic tape storage
+- Average annual durability is 99.999999999%
+- Cost per storage per month ($.0.004/GB) + retrieval cost
+- Each item in Glacier is called "Archive" (up to 40TB)
+- Archives are stored in "Vaults"
+3 retirveal options:
+- Expedited (1 to 5 minutes)
+- Standard (3 to 5 hours)
+- Bulk (5 to 12 hours)
+- Minimum storage duration of 90 days
+
+AMazon Glacier Deep Archive:
+- for longer storage
+- cheaper
+Retrieval:
+- Standar (12 hours)
+- Bulk (48 hours)
+Minimum storage duration of 180 days
+
+Lifecycle rules:
+- you can trnasition objects between storage classes
+- for infrequently accessed object, move them to Standard_IA
+- For archive objects you don't need in real time, Glacier or Deep Archive
+- Moving objects can be automated using a lifecycle configuration
+Transition actions: It defines when objects are transitioned to another storage class:
+- Move objects to Standard IA class 60 days after creation
+- Move to Glacier for archiving after 6 months
+Expiration actions: configure objects to expire (delete) after some time
+- Access log files can be set to delete after 365 days
+- Can be used to delete old versions of files (if versioning is enabled)
+- Can be used to delete incomplete multi-part uploads
+Rules can be created for a certain prefix
+Rules can be created fr certain object tags
+
+ANalytics:
+- You can setup s3 Analytics to help determine when to transition objects from standard to standar_IA
+- does not work for one zone IA or glacier
+- Report is updated daily
+- Takes about 24 hours to 48 hours to first start
+- Good first step to put together Lifecycle Rules (or improve them)
+
+Baseline Performance:
+- Amazon s3 automatically scaled to high request rates, latency 100-200ms
+- You application can achieve at least 3500 Put/Copy/Post/Delete and 5500 Get/Head requests per second per prefix in a bucket
+- There are no limits to the number of prefixes in a bucket
+- If you spread reads across four prefixes evenly, you can achienve 22,000 requests per second for Get and Head
+
+KMS Limitation:
+- if you use SSE-KMS you may be impacted by the KMS limits
+- When you upload, it calls the GenerateDataKey KMS API
+- When you ddownload, it calls the Decrypt KMS API
+- Count towards the KMS quota per second (5500, 10000, 30000 req/s based on region)
+- You can request a quote increase using the service quotas console
+
+S3 Performance:
+Multi part upload
+- Recommended for files >100MB
+- must use for files > 5GB
+- Can help parallelize uploads (speed up transfers)
+S3 transfer Acceleration
+- Increase transfer speed by transferring file to an AWS edge location which will forward the data to the S3 bucket in the target region
+- Compatible with multi-part upload
+
+S3 Byte-Range Fetches
+- Parallelize GETs by requesting specific Byte ranges
+- Better resilience in case of failures
+Can be used to speed up downloads
+Can be used to retrieve only partial data (for example the head of a file)
+
+S3 Select and Glacier Select
+- Retrieve less data using SQL by performing server side filtering
+- Can filter by rows and columns (simple SQL statements)
+- Less network transfer, less CPU cost client-side
+
+S3 Event Notifications:
+- S3:ObjectCreated,...
+- Object name filtering possible
+- can create as many "S3 events" as desired
+- S3 event notifications typically deliver events in seconds but can sometimes take a minute or longer
+- If 2 writes are made to a single non-versioned object at the same time, it is possible that only a single event notifivation will be sent
+- If you want to ensure that an event notification is sent for every successful write, you can enable versioning on your bucket
+
+S3 Glacier Operations
+Vault operations:
+- Create and Delete: delete only when there's no archives in it
+- Retrieving Metadata: creation date, number of archives, total size of all archives,...
+- Download Inventory: - list of archives in the vault (archive ID, creation date, size)
+Glacier Operations:
+- Upload: single operation or by parts (MultiPart upload) for larger archives
+- Download: first initiate a retrieval job for the archive, Glacier then prepares it for download. User then has a limited time to download the data from staging server. Optionally, specify a range or portion of bytes to retrieve
+- Delete: use Glacier Rest API or AWS SDKs by specifying archinve ID
+Restore links have an expiry date
+Retrieval Options:
+- Expedited (1 to 5 minutes) - $0.03 per GB and $10 per 1000 requests
+- Standard (3 to 5 hours) - 0.01 per GB and 0.03 per 1000 requests
+- Bulk (5 to 12 hours) - 0.0025 per GB and 0.025 per 1000 requests
+
+Vault Policies and Vault Lock
+Each vault has:
+- one vault access policy
+- one vault lock policy
+Vault policies are written in JSON
+Vault Access policy is like a bucket policy (restrict user/account permissions)
+Vault Lock Policy is a policy you lock, for regulatory and compliance requirements
+- The policy is immutable, it can never be changed (that's why it's called LOCK)
+- Example 1: forbid deleting an archive if less than 1 year old
+- Example 2: implement WORM policy (write once, read many)
+
+Notifications for Restore Operations
+Vault Notification Configuration:
+- Configure a vault so that when a job completes, a message is sent to SNS
+- Optionally, specify an SNs topic when you initiate a job
+S3 event notifications
+- S3 supports the restoration of objects archived to S3 Glacier storage classes
+- s3:ObjectRestore:Post => notify when object restoration initiated
+- s3:ObjectRestore:Completed => Notify when object restoration completed
+
+## Athena
+- Serverless service to perform analytics directly against S3 files
+- Use SQL Language to query the files
+- Has a JDBC / ODBC driver
+- Charged per query and amount of data scanned
+- Supports CSV, JSON, ORC, AVRO and Parquet (built on Presto)
+- Use Cases: Business intelligence/analytics/ reporting, amalyze & query VPC Flow Logs, ELB Logs, CloudTrail trails, etc.
+- Exam tip: Analyze dat adirectly on S3 => use Athena
+
+S3 Access Points
+Each Access pont gets it's own DNS and policy to limit who can access it
+- A specific IAM user/group
+- One policy per Access Point => Easier to manage than complex bucket policies
+Can restrict to traffic from a specific VPC
+Access points are linked to a specific bucket (unique name per acct/region)
+
+S3 Bucket Policy:
+use to:
+- Grant public access to the bucket
+- Force objects to be encrypted at upload
+- Grant access to another account (Cross account)
+Optional conditions on:
+- Public IP or elastic IP (not on private IP)
+- Source VPC or Source VPC Endpoint - only works with VPC Endpoints
+- CloudFront Origin Identity
+- MFA
+
+Batch Operations:
+Perfomr Bulk operations on existing S3 objects with a single request, example:
+- Modify object metatdata & properties
+- Copy objects between s# buckets
+- Replace object tag sets
+- Modify ACLs
+- Restore objects from S3 Glacier
+- Invoke Lambda function to perform custom action on each object
+A job consists of a list of objects, the action to perform and optional parameters
+S3 batch operations manages retries, tracks progress, sends completion notifications, generate reports, etc..
+You can use s3 inventory to get object list and use s3 select to filter your objects
+
+MultiPart Upload:
+- Upload large objects in parts (in any order)
+- Failures: restart uploading only failed parts (imporved performance)
+- Use Lifecycle policy to automate old parts deletion of unfinished upload after x days 
+- upload using aws cli or aws sdk
+
+## Snow
+- Highly- secure, portable devices to collect and process data at the edge and migrate data into and out of AWS
+- Data migration: Snowcone, Snowball edge, snowmobile
+- Edge computing: Snowcone, Snowball Edge
+Challenges:
+- Limited connectivity
+- Limited bandwidth
+- High network cost
+- Shared bandwidth )can't maximize the line)
+- Connection Stabability
+Solve: AWS snow family: offline devices to perform data migrations
+If it takes more than a week to transfer over the network, use snowball devices
+
+Snowball Edge:
+- Physical data transport solution: Move TBs or PBs of data in or out of AWS
+- Alternative to moving data over the network (and paying network fees)
+- Pay per data transfer job
+- Provide block storage and Amazon S3-compatible object storage
+Snowball Edge Storage Optimized
+- 80TB of HDD capacity for block volume and S3 compatible object storage
+Snowball Edge Compute Optimized
+- 42 TB of HDD capacity for block volume and S3 compatible object storage
+Use Cases: large data cloud migrations, DC decomission, disaster recovery
+
+Snowcone:
+- small, portable computing, anywhere, rugged & secure, withstands harsh environments
+- light (4.5 pounds, 2.1 kg)
+- devic used for edge computing, storage and data transfer
+- 8 TB of usable storage
+- Use snow cone where snowball does not fit (space-constrained environment)
+- Must provide your own battery/cables
+- Can be sent back to AWS offline, or connect it to internet and use AWS DataSync to send data 
+
+Snowmobile:
+- Transfer exabytes of data
+- Each Snowmobile has 100 PB of capacity (use multiple in parallel)
+- High security, temperature controlled, GPS, 24/7 video surveillance
+- Better than Snowmobile if you transfer more than 10 PB
+
+Usage Process:
+1. Request snowball devices from the AWS console for delivery
+2. Install the snowball client/AWS OpsHub on your servers
+3. Connect the snowball to your servers and copy files using the client
+4. Ship back the device when you're done (goes to the right AWS facility)
+5. Data will be loaded into an S3 bucket
+6. Snowball is completely wiped
+
+Edge Computing:
+Process data while it's being created on an edge location
+- A truck on the road, a ship at sea, mining underground
+These locations may include:
+- Limited/no internet access
+- Limited/no easy access to computing power
+We setup a Snoball Edge/Snowcone device to do edge computing
+Use cases of edge computing:
+- Preprocess data
+- Machine learning at the edge
+- Transcoding media streams
+Eventually we can ship back the device to AWS
+Snowcone (smaller):
+- 2 CPUs, 4GB of memory, wired or wireless access
+- USB-C power using a cord or the optional battery
+Snowball Edge - Compute Optimized
+- 52 vCPUs, 208 GB of RAM
+- Optional GPU
+- 42 TB usable storage
+Snowball Edge - Storage Optimized
+- Up to 40 vCPUs, 80 GB of RAM
+- Object storage clustering available
+Can run EC2 Instances & AWS Lambda Functions (using AWS IoT Greengrass)
+
+OpsHub:
+- Historically to use Snow Family devices, you needed a CLI
+Today, you can use AWS OpsHub ( a software you install on your computer/laptop) to manage your Snow Family Device
+- Unlocking and configuring single or clustered devices
+- Transferring files
+- Launching and managing instances running on Snow Family devices
+- Monitoring device metrics (storage capacity, active instances on your devices)
+- Launch compatible AWS services on your devices (ex. Amazon EC2 instances, AWS DataSync, Network File System (NFS))
+
+Hybrid Cloud Storage:
+Aws is pushing for "hybrid cloud"
+- part of your infrastructure is on the cloud
+- part of your infrastructure is on-premises
+This can be due to
+- Long cloud migrations
+- security requirements
+- compliance requirements
+- IT strategy
+S3 is a proprietary technology (unlike EFS/NFS) so how do you expose the S3 data on-premises
+AWS Storage Gateway
+
+Storage gateway:
+- Bridge between on-premises, data and cloud data in S3
+- Use cases: disaster recovery, backup and restore, tiered storage
+3 types of Storage Gateway:
+- File Gateway
+- Volume Gateway
+- Tape Gateway
+
+File Gateway
+- Configred s3 buckets are accessible using NFS and SMB protocol
+- Supports S3 standard, S3 IA, S3 One Zone IA
+- Buckets access using IAM roles for each File Gateway
+- Most recently used data is cached in the file gateway
+- Can be mounted on many servers
+- Integrated with Active Directory (AD) for user authentication 
+
+Volume Gateway
+- Block storage using iSCSI protocol backed by s3
+- Backed by EBS snapshots which can help restore on-premises volumes
+- Cached volumes: low latency access to most recent data
+- Stored volumes: entire dataset is on premise, scheduled backups to S3
+
+Tape Gateway
+- Some companies have backup processes using physical tapes
+- With tape gateway, companies use the same process, but in the cloud
+- Virtual Tape Library (VTL) backed by Amazon S3 and glacier
+- Back up data using existing tape-based processes (and iSCSI interface)
+- Works with leading backup software vendors
+
+Storage Gateway - Harware appliance
+- Using storage gateway means you need on-premises virtualization
+- Otherwise you can use a storage gateway harward appliance
+- you can buy it on amazon.com
+- Works with File Gateway, Volume Gateway, Tape Gateway
+- Has the required CPU, memory, network, SSD cache resources
+- Helpful for daily NFS backups in small data centers
+
+Extras:
+File gateway is POSIX compliant (Linux File system)
+- POSIX metadata ownership, permissions and timestamps stored in objects' metadata in S3
+Reboot Storage Gateway VM: (e.g. maintenance)
+- File Gateway: simply restart the storage gateway VM
+- Volume and tape Gateway
+1. Stop storage Gateway Service (AWS console, VM local Console, Storage Gateway API)
+2. Reboot the Storage Gateway VM
+3. Start Storage Gateway Service (AWS console, VM local console, Storage Gateway API)
+Activations
+2 ways to get activation key:
+- using the Gateway VM CLI
+- Make a web request to the gateway VM (Port 80)
+Troubleshooting Activation Failures
+- Make sure the Gateway has port 80 opened
+- Check that the Gateway VM has the correct time and synchronizing it's time automatically to a Network Time Protocol (NTP) server
+Volume Gateway Cache
+Cached mode: only the most recent data is stored
+Looking at cache efficiency:
+- look at the CacheHitPercent metric (you want it to be high)
+- Look at the CachePercentUsed (you don't want it to be high)
+Create a larger cache disk
+- Use the cache volume to clone a new volume of a larger size
+- Select the new disk as the cached volume
+
+## Amazon FSx
+problem to solve: EFS is a shared POSIX system for linux systems
+
+FSx for Windows
+- FSx for windows is a fully managed Windows file system share drive
+- Supports SMB protocol & Windows NTFS
+- Microsoft Active Directory integrations, ACL, user quotas
+- Built on SSD, scale up to 10s of GB/s, millions of IOPS, 100s PB of data
+- Can be accessed from your on-premise infrastructure
+- Can be configured to be Multi-AZ (high availability)
+- Data is backed-up daily to S3
+Single AZ
+- automatically replicates data winthin az
+- 2 generations: single AZ1 (SSD), Single AZ 2 (SSD and HDD)
+Multi-AZ
+- automatically replicates data across AZ (synchronous)
+- Standby file server in a different AZ (automatically failover)
+
+
+FSx for Lustre
+- Lustra is a type of parallel distributed file system for large-scale computing
+- the name Lustre is derived from linux and cluster
+- Machine learning, High performance computing (HPC)
+- Video processing, Financial modeling, elctronic design automation
+- Scales up to 100s GB/s, millions of IOPS, sub ms latencies
+seamless integration with s3
+- Can read s3 as a file system (through FSx)
+- Can write the output of the computations back to S3 (through FSx)
+Can be used from on-premises servers
+
+FSx File system Deployment Options
+Scratch File System:
+- Temporary storage
+- Data is not replicated (doesn't persist if file server fails)
+- high burst (6x faster, 200MBps per TB)
+- Usage: short term processing, optimize costs
+Persistent File system:
+- Long term storage
+- data is replicated within same AZ
+- Replace failed files within minutes
+- Usage: long-term processing, sensitive data
+
+## CloudFront
+Content delivery network (CDN)
+Improves read performance, content is cached at the edge
+216 points of presence globally (edge locations)
+DDoS protection, integration with Shield, AWS Web Application Firewall
+Can expose external HTTPS and can talk to internal HTTPS backends
+
+Cloudfront Origins:
+S3 bucker;
+- For distributed files and caching them at the edge
+- Enhanced security with CloudFront Oirigin Access Identity (OAI)
+- Cloudfront can be used as an ingress (to upload files to S3)
+Custom Origin (HTTP)
+- Application load balancer
+- EC2 instance
+- S3 website (must first enable the bucket as a static S3 website)
+- Any HTTP backend you want
+
+Geo Restriction
+Wou can restrict who can access your distribution
+- Whitelist: allow your users to access content only if they're in one of the countries on a list of approved countries
+- Blacklist: Prevent your users from accessing your content if they're in one of the countries on a blacklist of banned countries
+The "country" is determined using a 3rd party Geo-IP database
+Use case: Copyright Laws to control access to content
+
+vs. S3 CRR
+Cloudfront:
+- Global edge network
+- Files are cached for a ttl (maybe a day)
+- great for static content that be available anywhere
+S3 cross region replication:
+- Must be setup for each region you want replication to happen
+- Files are updated in near real- time
+- REad only
+- Great for dynamic content that needs to be available at low latency in few regions
+
+CloudFront Access Logs
+- Logs every request made to Cloudfront into a logging S3 bucket
+
+CloudFornt Reports:
+Its possible to generate reports on:
+- cache Statistics Report
+- popular objects report
+- Top Referrers Report
+- Usage reports
+- Viewers Reports
+These reports are based on the data from the access logs
+
+CloudFront troubleshooting
+Cloudfront caches HTTP 4xx and 5xx status codes returned by s3
+
+Cloudfront Caching:
+Cache based on:
+- headers
+- session cookies
+- query string parameters
+The cache lives at each CloudFront Edge location
+You want to maximize the cache hit rate to minimize requests on the origin
+Control the TTL (0 seconds to 1 year), can be set by the origin using the Cache-Control header, Expires header...
+You can invalidate part of the cache using the CreateInvalidation API
+ 
+Headers:
+1. Forward all headers to your origin
+- no caching, every request to origin
+- ttl must be set to 0
+2. Forward a whitelist of headers
+- caching based on values in all the specified headers
+3. None == Forward only the default headers
+- no caching based on request headers
+- best caching performance
+origin cutom headers
+- origin-level setting
+- set a constant header/header value for all requests to origin
+Behaviour settings:
+- cache related settings
+- contains the whitelist of headers to forward
+
+CloudFront Caching TTL
+- "Cache-control: max age" is prefered to "Expires" header
+- If the origin always sends back the header Cache-Control, then you can set the TTL to be controlled only by that header
+- In case you want to set min/max boundaries, you choose "customize" for the object Caching setting
+- In case the Cache-Control header is missing, it will default to "default value"
+
+cloudFront cache behaviour for cookies
+Cookies is a specific request header
+1. Default do not process the cookies
+- Caching is ot based on cookies
+- cookies are not forwarded
+2. Forward a whitelist of cookies
+- Caching based on values in all the specified cookies
+3. Forward all cookies
+- worst caching performance
+
+cloudFront cache behaviour for query strings
+query strings parameters are in the url
+1. default: do not process the query strings
+-  Caching is not based on query strings
+- Parameters are not forwarded
+2. Forward a whitelist of query strings
+- Caching based on the parameter whitelist
+3. Forward all query strings
+- Caching based on all parameters
+
+
+Maximize cache hits:
+maximize by seperating static and dynamic distributions
+
+Increase Cache Ratio
+- Monitor the CloudWAtch metric CacheHitRate
+- Specify how long to cache your objects: Cache-Control max age header
+- Specify none or the minimally required headers
+- Specify none or the minimally required cookies
+- Specify none or the minimally required query string parameters
+- Seperate static and dynamic distributions (two origins)
+
+Cloudfront with ALB sticky sessions:
+- Must forward/whitelist the cookie that controls the session affinity to the origin to allow the session affinity to work
+- Set a TTL to a value lesser than when the authentication cookie expires
+
+## Databases
+
+RDS
+- RDS stands for Relational Database Service 
+- It's a managed DB service for DB use SQL as a query language
+- It allows you to create databases in the cloud that are managed by AWS
+PostgreSQL, MySQL, MariaDB, Oracle, Microsoft SQL Server, Aurora
+
+Advantages over using RDS vs deploying a DB on EC2
+RDS is a managed service:
+- Automated provisioning, OS patching
+- Continuous backups and restore to specific timestamp ( Point in time restore)
+- Monitoring dashboards
+- Read replics
+- Multi AZ setup for DR
+- Maintenance windows for ungrades
+- Scaling capability
+- Storage backed by EBS
+But you can't SSH into your instances
+
+RDS storage auto Scaling
+- helps you inscrease storage on your RDS DB instance dynamically
+- When RDS detects you are running out of free database storage, it scales automatically
+- Avoid manually scaling your DC storage
+- You have to set Maximum Storage Threshold (maximum limit for DB storage)
+Automaticall modify storage if
+- free storage is less than 10% of allocated storage
+- Low-storage lasts at least 5 minutes
+- 6 hours have passed since last modificationo
+Useful for applications with unpredictable workloads
+Supports all RDS db engines (Mariadb, mysql postgres, sql server, oracle)
+
+Read Replicas
+- Up to 5 read replicas
+- Within AZ, Cros AZ, Cross region
+- Replication is ASYNC, so reads are eventually consistent
+- Replicas can be promoted to their own DB
+- Applications must update the connection string to leverage read replicas
+Use Cases:
+- You have a promduction databas that is taking on normal load
+- you want to run a reporting application to run some snalytics
+- you create a read replica to run the new workload there
+- the production application is unaffected
+- read replicas are used for select (=read) only kind of statements (not insert, update or delete)
+Netowkr cost:
+- In AWS there's a network cost when data goes from one az to another
+- For RDS Read Replicas within the same region, you don't pay that fee
+
+RDS Multi-AZ
+- SYNC replication
+- One DNS name - automatic app failover to standby 
+- Increase availability
+- Failover in case of loss of AZ, loss of network, instance or storage failure
+- No manual intervention in apps
+- Not used for scaling
+- Multi- AZ replication is free
+- Note: the Read Replicas can be setup as Multi AZ for disaster Recovery
+From single AZ to Multi- AZ:
+- Zero dwontime operation(no need to stop the DB)
+- Just click on "modify" for the database
+The following happens internally:
+- A snapshot is taken
+- A new db is restored from the snapshot in a new az
+- synchronization is established between the 2 db
+Failover Conditions:
+The primary DB instance
+- Failed
+- OS is undergoing software patching
+- Unreachable due to loss of network connectivity
+- Modified (e.g. DB instance type changed)
+- Busy and unresponsive
+- Underlying storage failure
+An AZ outage
+A manual failover of the db instance was initated using reboot with failover
+Encryption:
+At rest:
+- Possibility to encrypt the master and read replicas with AWS KMS - AES 256 encryption
+- Encryption has to be defined at launch time
+- If the master is not encrypted, the read replicas cannot be encrypted
+- Transparent Data Encryption (TDE) available for Oracle and SQL Server
+In-Flight encryption:
+- SSL certificates to encryp data to RDS in flight
+- Provide SSL options with trust certificate when connecting to DB
+To enforce SSL:
+PostgreSQL: rds.force_ssl=1 in the RDS console (Parameter group)
+MySQL: Within the DB: Grant usage *.* to 'mysqluser'@'%' Require SSL;
+
+RDS Encryption Operations
+Encrypting RDS backups:
+- Snapshots on un-encrypted RDS databases are un-encrypted
+- Snapshots of encrypted RDS databases are encrypted
+- Can copy aa snapshot into an encrypted one
+Encrypt an un-encrypted RDS db
+- Create a snapshot of the un-encrypted db
+- Copy the snapshot and enable encryption for the snapshot
+- Restore the db from the encrypted snapshot
+- Migrate applications to the new db, and delete the old db
+
+Security - IAM and Network
+NetworkL
+- RDS db are usually deployed within a private subnet, not in a public one
+- RDS security works by leveraging security groups (the same concept as for the EC2 instances) - it controls which IP/ security group can communicate with RDS
+Access Management:
+- IAM policies help control who can manage AWS RDS (through the RDS API)
+- Traditional Username and Passowrd can be used to login into the db
+- IAM based authentication can be used to login into RDS MYSQL and PostgreSQL
+
+IAM Authentication
+- IAM db authentication works with MySQL and PostGReSQL
+- You don't need a password, just an authentication token obtained through IAM & RDS API calls
+- Auth Token has a lifetime of 15 minutes
+Benefits: 
+- Network in/out must be encrypted using SSL
+- IAM to centrally manage users instad of DB
+- Can leverage IAM and EC2 instance profiles for easy integration
+
+Security - Summary:
+encryption at rest:
+- is done when you first create the db instance
+- or unencrypted db ->snapshot->sopy snapshot as encrypted->create db from snapshot
+your responsibility:
+- check the ports/ip/security group inbound rules in DB's SG
+- In-db user creation and permissions or manage through IAM
+- Creating a db with or without public access
+- Ensure parameter groups or db is configured to only allow SSL connections
+AWS responsibility:
+- No SSH access
+- No manual DB patching
+- No manual OS patching
+- No way to audit the underlying instance
+
+Lambda by default:
+- 
+
+
 
 
 
