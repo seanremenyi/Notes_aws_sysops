@@ -22,8 +22,9 @@ Elastic Fabric Adapter( EFA)
 Placement Groups
 - Sometimes you want control over the EC2 instances placement srategy
 - That strategy can be defined using placement groups
-- When you crea a placement group, you specify one of the following strategies for the group:
-Cluster - clusterrs instance into a lot latency group in a single Availabiliy zone
+- When you create a placement group, you specify one of the following strategies for the group:
+Cluster 
+- clusters instance into a lot latency group in a single Availabiliy zone
 - Same rack (same hardware)
 - Same AZ
 - low latency
